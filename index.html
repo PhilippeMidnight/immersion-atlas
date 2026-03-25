@@ -1,0 +1,1996 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Immersion Atlas — Vision & Fonctionnalités</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #050711;
+      --bg-soft: #0b0f1f;
+      --bg-softer: #111729;
+      --accent: #7c5cff;
+      --accent-soft: rgba(124, 92, 255, 0.25);
+      --accent-strong: #a876ff;
+      --text: #f7f7ff;
+      --muted: #9ca3c7;
+      --border-soft: rgba(255, 255, 255, 0.08);
+      --radius-xl: 22px;
+      --radius-full: 999px;
+      --shadow-soft: 0 24px 60px rgba(0, 0, 0, 0.7);
+      --shadow-glow: 0 0 60px rgba(124, 92, 255, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* Full-page background container */
+    .bg-container {
+      position: fixed;
+      inset: 0;
+      z-index: -3;
+      background: radial-gradient(ellipse 120% 80% at 50% 0%, #111827 0%, #050711 40%, #020309 100%);
+      pointer-events: none;
+    }
+
+    body[data-lang="fr"] {
+      /* nothing special, default */
+    }
+
+    body[data-lang="en"] {
+      /* could tweak if needed */
+    }
+
+    .page {
+      position: relative;
+      min-height: 100vh;
+      padding: 40px clamp(24px, 6vw, 72px) 80px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Background orbs - using fixed positioning without parallax for seamless scrolling */
+    .bg-orb {
+      position: fixed;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.4;
+      z-index: -2;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    .orb-1 {
+      top: -150px;
+      left: -100px;
+      background: radial-gradient(circle, #7c5cff, transparent 70%);
+    }
+
+    .orb-2 {
+      bottom: -150px;
+      right: -100px;
+      background: radial-gradient(circle, #14b8a6, transparent 70%);
+    }
+
+    .orb-3 {
+      top: 40%;
+      right: 10%;
+      background: radial-gradient(circle, #f97316, transparent 70%);
+      opacity: 0.25;
+    }
+
+    /* Custom cursor */
+    .cursor-dot,
+    .cursor-outline {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 100010; /* above modal and AI button */
+      transform: translate(-50%, -50%);
+      transition: transform 0.08s ease-out;
+      will-change: transform;
+    }
+
+    .cursor-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent-strong);
+      box-shadow: 0 0 12px rgba(124, 92, 255, 0.9);
+    }
+
+    .cursor-outline {
+      width: 32px;
+      height: 32px;
+      border: 1px solid rgba(148, 163, 255, 0.6);
+      background: radial-gradient(circle at center, rgba(124, 92, 255, 0.25), transparent);
+      backdrop-filter: blur(6px);
+      opacity: 0.7;
+    }
+
+    a, button, .card, .pill, .nav-pill {
+      cursor: none;
+    }
+
+    /* Hide custom cursor on touch/mobile devices */
+    @media (pointer: coarse), (hover: none) {
+      body,
+      a, button, .card, .pill, .nav-pill {
+        cursor: auto;
+      }
+      .cursor-dot,
+      .cursor-outline {
+        display: none !important;
+      }
+    }
+
+    /* Language switcher */
+    .lang-switcher {
+      position: fixed;
+      top: 20px;
+      right: 24px;
+      z-index: 9999;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 255, 0.4);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7);
+    }
+
+    .lang-switcher button {
+      border: none;
+      outline: none;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: transparent;
+      color: var(--muted);
+      transition: background 0.2s ease, color 0.2s ease;
+      cursor: none;
+    }
+
+    .lang-switcher button.active {
+      background: radial-gradient(circle at top left, rgba(148, 163, 255, 0.4), rgba(15, 23, 42, 0.9));
+      color: #e5e7ff;
+    }
+
+    .lang-switcher-separator {
+      width: 1px;
+      height: 16px;
+      background: rgba(148, 163, 255, 0.4);
+    }
+
+    /* Hero */
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2.4fr);
+      gap: 40px;
+      margin-bottom: 56px;
+      align-items: center;
+      position: relative;
+    }
+
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 14px;
+      border-radius: 999px;
+      background: linear-gradient(to right, rgba(124, 92, 255, 0.2), rgba(15, 23, 42, 0.8));
+      border: 1px solid rgba(148, 163, 255, 0.35);
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.7);
+    }
+
+    .hero-title {
+      font-size: clamp(40px, 5vw, 52px);
+      line-height: 1.04;
+      letter-spacing: -0.04em;
+      margin-bottom: 16px;
+      background: linear-gradient(120deg, #ffffff, #d1d5ff, #7c5cff);
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .hero-subtitle-inline {
+      font-size: 0.82em;
+      opacity: 0.95;
+      color: #e5e7ff;
+      -webkit-background-clip: unset;
+      background: none;
+    }
+
+    .hero-subtitle {
+      font-size: 17px;
+      line-height: 1.6;
+      color: var(--muted);
+      max-width: 520px;
+      margin-bottom: 24px;
+    }
+
+    .hero-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 255, 0.35);
+      background: radial-gradient(circle at top left, rgba(148, 163, 255, 0.22), rgba(15, 23, 42, 0.9));
+      font-size: 12px;
+      color: #e5e7ff;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(148, 163, 255, 0.9);
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+
+    .meta-item span:first-child {
+      color: #e5e7ff;
+      font-weight: 500;
+    }
+
+    .scroll-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      opacity: 0.8;
+      text-decoration: none;
+    }
+
+    .scroll-indicator-icon {
+      width: 24px;
+      height: 40px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 255, 0.4);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 4px 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .scroll-indicator-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(148, 163, 255, 0.9);
+      animation: scrollDot 1.4s ease-in-out infinite;
+    }
+
+    @keyframes scrollDot {
+      0% { transform: translateY(0); opacity: 0; }
+      15% { opacity: 1; }
+      70% { transform: translateY(18px); opacity: 1; }
+      100% { transform: translateY(22px); opacity: 0; }
+    }
+
+    .hero-visual {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      border-radius: 28px;
+      background: radial-gradient(circle at top left, rgba(148, 163, 255, 0.4), rgba(15, 23, 42, 1));
+      padding: 18px;
+      border: 1px solid rgba(148, 163, 255, 0.4);
+      box-shadow: var(--shadow-soft), var(--shadow-glow);
+      overflow: hidden;
+    }
+
+    .hero-visual-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: 22px;
+      background: radial-gradient(circle at top, #020617, #020617 40%, #020617);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(
+          rgba(148, 163, 255, 0.08) 1px,
+          transparent 1px
+        ),
+        linear-gradient(
+          90deg,
+          rgba(148, 163, 255, 0.08) 1px,
+          transparent 1px
+        );
+      background-size: 28px 28px;
+      mask-image: radial-gradient(circle at center, black 30%, transparent 100%);
+      opacity: 0.6;
+    }
+
+    .hero-label {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 255, 0.5);
+      font-size: 11px;
+      color: #e5e7ff;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(14px);
+    }
+
+    .hero-label-tag {
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(148, 163, 255, 0.16);
+      font-size: 11px;
+    }
+
+    .hero-rings {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .ring {
+      position: absolute;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 255, 0.3);
+      width: 46%;
+      height: 24%;
+      transform: rotate(-8deg);
+    }
+
+    .ring.r2 {
+      width: 68%;
+      height: 34%;
+      opacity: 0.7;
+      transform: rotate(4deg);
+    }
+
+    .ring.r3 {
+      width: 86%;
+      height: 46%;
+      opacity: 0.4;
+      transform: rotate(-2deg);
+    }
+
+    .hero-metric-card {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      font-size: 11px;
+    }
+
+    .hero-metric {
+      flex: 1;
+      padding: 10px 11px;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 255, 0.35);
+      color: var(--muted);
+      backdrop-filter: blur(18px);
+    }
+
+    .hero-metric span.title {
+      display: block;
+      font-size: 11px;
+      color: #e5e7ff;
+      margin-bottom: 4px;
+    }
+
+    .hero-metric span.value {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #c7d2ff;
+    }
+
+    .hero-metric span.tag {
+      font-size: 10px;
+      color: #9ca3c7;
+      display: block;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 600px) {
+      .hero-metric-card {
+        flex-direction: column;
+      }
+    }
+
+    /* Section nav */
+    .section-nav {
+      position: sticky;
+      top: 16px;
+      z-index: 20;
+      margin-bottom: 32px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav-pill {
+      border-radius: 999px;
+      padding: 6px 14px;
+      border: 1px solid rgba(148, 163, 255, 0.3);
+      background: rgba(12, 18, 36, 0.95);
+      font-size: 12px;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+      text-decoration: none;
+    }
+
+    .nav-pill::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(148, 163, 255, 0.7);
+    }
+
+    .nav-pill:hover {
+      background: radial-gradient(circle at top left, rgba(148, 163, 255, 0.4), rgba(12, 18, 36, 0.96));
+      border-color: var(--accent);
+      color: #e5e7ff;
+      transform: translateY(-1px);
+    }
+
+    /* Sections */
+    .section {
+      margin-bottom: 52px;
+      position: relative;
+    }
+
+    .section-header {
+      margin-bottom: 18px;
+    }
+
+    .section-eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .section-title {
+      font-size: 22px;
+      letter-spacing: -0.03em;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title span.highlight {
+      background: linear-gradient(120deg, #e5e7ff, #a5b4fc);
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .section-tagline {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .section-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.4fr);
+      gap: 18px;
+    }
+
+    @media (max-width: 900px) {
+      .section-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .section-main,
+    .section-side {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Cards */
+    .card {
+      border-radius: var(--radius-xl);
+      background: radial-gradient(circle at top left, rgba(148, 163, 255, 0.12), rgba(15, 23, 42, 0.96));
+      border: 1px solid var(--border-soft);
+      padding: 16px 16px 14px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+      cursor: none;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -30%;
+      background: radial-gradient(circle at top left, rgba(124, 92, 255, 0.25), transparent 60%);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+    }
+
+    .card:hover {
+      transform: translateY(-6px) translateZ(0);
+      box-shadow: 0 24px 65px rgba(0, 0, 0, 0.9), 0 0 40px rgba(124, 92, 255, 0.35);
+      border-color: rgba(148, 163, 255, 0.6);
+      background: radial-gradient(circle at top left, rgba(148, 163, 255, 0.16), rgba(15, 23, 42, 0.98));
+    }
+
+    .card:hover::before {
+      opacity: 1;
+    }
+
+    .card-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #a5b4ff;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-label-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-soft);
+      box-shadow: 0 0 16px rgba(124, 92, 255, 0.8);
+    }
+
+    .card-title {
+      font-size: 15px;
+      color: #e5e7ff;
+      margin-bottom: 6px;
+    }
+
+    .card-body {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .card-list {
+      list-style: none;
+      margin-top: 8px;
+      font-size: 13px;
+      color: #cbd5ff;
+    }
+
+    .card-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .card-bullet {
+      margin-top: 4px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(148, 163, 255, 0.9);
+      flex-shrink: 0;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .chip {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 255, 0.3);
+      color: #cbd5ff;
+    }
+
+    .card-footer-note {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--muted);
+      opacity: 0.8;
+    }
+
+    /* Summary */
+    .summary {
+      margin-top: 40px;
+      padding: 18px 20px;
+      border-radius: 22px;
+      background: radial-gradient(circle at top left, rgba(148, 163, 255, 0.22), rgba(15, 23, 42, 0.98));
+      border: 1px solid rgba(148, 163, 255, 0.5);
+      box-shadow: var(--shadow-soft), var(--shadow-glow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .summary::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, rgba(56, 189, 248, 0.22), transparent 60%);
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .summary-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .summary-title {
+      font-size: 18px;
+      letter-spacing: -0.03em;
+      margin-bottom: 6px;
+    }
+
+    .summary-body {
+      font-size: 14px;
+      color: #e5e7ff;
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+
+    .summary-tagline {
+      font-size: 13px;
+      color: #cbd5ff;
+      font-style: italic;
+    }
+
+    /* Multilingual display helpers */
+    .lang-block {
+      display: block;
+    }
+
+    body[data-lang="fr"] .lang-fr {
+      display: inline;
+    }
+    body[data-lang="fr"] .lang-en {
+      display: none;
+    }
+
+    body[data-lang="en"] .lang-fr {
+      display: none;
+    }
+    body[data-lang="en"] .lang-en {
+      display: inline;
+    }
+
+    /* Scroll reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.45s ease-out, transform 0.45s ease-out;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Modal Base */
+    .atlas-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 7, 17, 0.65);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .atlas-modal.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .atlas-modal-content {
+      width: min(700px, 90%);
+      padding: 32px;
+      border-radius: 24px;
+      background: radial-gradient(circle at top left, rgba(148,163,255,0.25), rgba(15,23,42,0.96));
+      border: 1px solid rgba(148,163,255,0.5);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.65);
+      position: relative;
+      animation: modalPop 0.25s ease forwards;
+    }
+
+    @keyframes modalPop {
+      0% { transform: translateY(20px) scale(0.98); opacity: 0; }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .atlas-modal-title {
+      font-size: 24px;
+      margin-bottom: 16px;
+      background: linear-gradient(120deg, #fff, #d1d5ff, #7c5cff);
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .atlas-modal-text {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #d0d6ff;
+    }
+
+    .atlas-modal-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,255,0.4);
+      background: rgba(12,18,36,0.65);
+      color: #fff;
+      font-size: 16px;
+      cursor: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .atlas-modal-close:hover {
+      background: rgba(124,92,255,0.35);
+      transform: scale(1.06);
+    }
+  
+    /* Scroll.ai (Atlas chatbot) floating button */
+    .immersion-ai-button {
+      cursor: pointer !important;
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      width: 64px;
+      height: 64px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,255,0.45);
+      background:
+        radial-gradient(circle at top left,
+          rgba(124,92,255,0.35),
+          rgba(15,23,42,0.95));
+      backdrop-filter: blur(14px);
+      box-shadow:
+        0 12px 40px rgba(0,0,0,0.7),
+        0 0 30px rgba(124,92,255,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100001;
+      transition: transform 0.2s ease,
+                  box-shadow 0.2s ease,
+                  border-color 0.2s ease;
+      cursor: none;
+    }
+
+    .immersion-ai-button:hover {
+      transform: translateY(-2px) scale(1.04);
+      border-color: rgba(168,118,255,0.9);
+      box-shadow:
+        0 18px 60px rgba(0,0,0,0.9),
+        0 0 45px rgba(124,92,255,0.7);
+    }
+
+    .immersion-ai-button svg {
+      pointer-events: none;
+    }
+
+    /* If Scroll popup needs the OS cursor */
+    .scroll-expert-container,
+    .scroll-expert-container * {
+      cursor: auto !important;
+    }
+
+  </style>
+</head>
+<body data-lang="fr">
+  <script src="https://app.scroll.ai/embed-expert/script.js" defer></script>
+  <!-- Fixed background gradient -->
+  <div class="bg-container"></div>
+
+  <!-- Background orbs -->
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+
+  <!-- Custom cursor -->
+  <div class="cursor-outline"></div>
+  <div class="cursor-dot"></div>
+
+  <!-- Language switcher -->
+  <div class="lang-switcher">
+    <button type="button" data-lang-switch="fr" class="active">FR</button>
+    <div class="lang-switcher-separator"></div>
+    <button type="button" data-lang-switch="en">EN</button>
+  </div>
+
+  <main class="page">
+    <!-- Hero -->
+    <header class="hero reveal">
+      <div>
+        <div class="badge">
+          <span class="badge-dot"></span>
+          <span class="lang-fr">Immersion • Atlas</span>
+          <span class="lang-en">Immersion • Atlas</span>
+        </div>
+        <h1 class="hero-title">
+          <span class="lang-fr">
+            Immersion Atlas<br />
+            <span class="hero-subtitle-inline">L’intelligence centrale de vos projets immobiliers.</span>
+          </span>
+          <span class="lang-en">
+            Immersion Atlas<br />
+            <span class="hero-subtitle-inline">The intelligence layer behind your real estate projects.</span>
+          </span>
+        </h1>
+        <p class="hero-subtitle">
+          <span class="lang-fr">
+            Atlas analyse chaque interaction dans Immersion pour comprendre vos acheteurs, aider vos équipes de vente et offrir aux promoteurs une lecture stratégique en temps réel de leurs projets.
+          </span>
+          <span class="lang-en">
+            Atlas analyzes every interaction inside Immersion to understand buyers, support sales teams, and give developers a real-time strategic view of their projects.
+          </span>
+        </p>
+
+        <div class="hero-pills">
+          <div class="pill">
+            <span class="pill-dot"></span>
+            <span class="lang-fr">Intelligence commerciale temps réel</span>
+            <span class="lang-en">Real-time sales intelligence</span>
+          </div>
+          <div class="pill">
+            <span class="pill-dot"></span>
+            <span class="lang-fr">Insights promoteurs &amp; pricing</span>
+            <span class="lang-en">Developer &amp; pricing insights</span>
+          </div>
+          <div class="pill">
+            <span class="pill-dot"></span>
+            <span class="lang-fr">Visites assistées par l’IA</span>
+            <span class="lang-en">AI-assisted tours</span>
+          </div>
+          <div class="pill">
+            <span class="pill-dot"></span>
+            <span class="lang-fr">Voix &amp; texte&nbsp;: “Dis Atlas…”</span>
+            <span class="lang-en">Voice &amp; text: “Hey Atlas…”</span>
+          </div>
+        </div>
+
+        <div class="hero-meta">
+          <div class="meta-item">
+            <span class="lang-fr"><span>Pour qui&nbsp;:</span> Promoteurs, directions commerciales, équipes de vente</span>
+            <span class="lang-en"><span>For:&nbsp;</span>Developers, sales leadership, on-site teams</span>
+          </div>
+          <div class="meta-item">
+            <span class="lang-fr"><span>Intégré à&nbsp;:</span> Immersion (app et web)</span>
+            <span class="lang-en"><span>Integrated into:&nbsp;</span>Immersion (app &amp; web)</span>
+          </div>
+        </div>
+
+        <a href="#sales" class="scroll-indicator">
+          <div class="scroll-indicator-icon">
+            <div class="scroll-indicator-dot"></div>
+          </div>
+          <span class="lang-fr">Explorer la vision Atlas</span>
+          <span class="lang-en">Explore the Atlas vision</span>
+        </a>
+      </div>
+
+      <div class="hero-visual">
+        <div class="hero-visual-inner">
+          <div class="hero-grid"></div>
+          <div class="hero-label">
+            <span class="lang-fr">Vue Atlas</span>
+            <span class="lang-en">Atlas view</span>
+            <span class="hero-label-tag lang-fr">Prototype conceptuel</span>
+            <span class="hero-label-tag lang-en">Concept prototype</span>
+          </div>
+          <div class="hero-rings">
+            <div class="ring r1"></div>
+            <div class="ring r2"></div>
+            <div class="ring r3"></div>
+          </div>
+          <div class="hero-metric-card">
+            <div class="hero-metric">
+              <span class="title lang-fr">Score de probabilité</span>
+              <span class="title lang-en">Deal probability score</span>
+              <span class="value lang-fr">72% de chances de conversion</span>
+              <span class="value lang-en">72% likelihood to convert</span>
+              <span class="tag lang-fr">Basé sur comportement + intérêts</span>
+              <span class="tag lang-en">Based on behaviour &amp; interests</span>
+            </div>
+            <div class="hero-metric">
+              <span class="title lang-fr">Insight promoteur</span>
+              <span class="title lang-en">Developer insight</span>
+              <span class="value lang-fr">Unités 15xx sous-performantes</span>
+              <span class="value lang-en">15xx tier underperforming</span>
+              <span class="tag lang-fr">Recommandation : ajuster le pricing</span>
+              <span class="tag lang-en">Recommendation: adjust pricing</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Section nav -->
+    <nav class="section-nav reveal">
+      <a href="#sales" class="nav-pill">
+        <span class="lang-fr">Intelligence commerciale</span>
+        <span class="lang-en">Sales intelligence</span>
+      </a>
+      <a href="#buyer" class="nav-pill">
+        <span class="lang-fr">Intelligence acheteur</span>
+        <span class="lang-en">Buyer intelligence</span>
+      </a>
+      <a href="#promoter" class="nav-pill">
+        <span class="lang-fr">Intelligence promoteur</span>
+        <span class="lang-en">Developer intelligence</span>
+      </a>
+      <a href="#automation" class="nav-pill">
+        <span class="lang-fr">Visites &amp; guidance IA</span>
+        <span class="lang-en">Tours &amp; AI guidance</span>
+      </a>
+      <a href="#assistant" class="nav-pill">
+        <span class="lang-fr">Assistant “Dis Atlas…”</span>
+        <span class="lang-en">“Hey Atlas…” assistant</span>
+      </a>
+    </nav>
+
+    <!-- SALES INTELLIGENCE -->
+    <section id="sales" class="section reveal">
+      <header class="section-header">
+        <div class="section-eyebrow">
+          <span class="lang-fr">Bloc 01</span>
+          <span class="lang-en">Block 01</span>
+        </div>
+        <h2 class="section-title">
+          <span class="highlight lang-fr">Intelligence commerciale</span>
+          <span class="highlight lang-en">Sales intelligence</span>
+          <span class="lang-fr">— conclure plus souvent, avec moins de friction.</span>
+          <span class="lang-en">— close more deals, with less friction.</span>
+        </h2>
+        <p class="section-tagline">
+          <span class="lang-fr">Atlas transforme chaque visite en un signal exploitable pour vos équipes de vente.</span>
+          <span class="lang-en">Atlas turns every visit into a clear, actionable signal for your sales teams.</span>
+        </p>
+      </header>
+
+      <div class="section-grid">
+        <div class="section-main">
+          <!-- Card: Deal probability -->
+          <article
+            class="card"
+            data-title-fr="Score de probabilité de vente"
+            data-title-en="Deal probability scoring"
+            data-description-fr="Atlas calcule un score de probabilité de vente en combinant les données de navigation (durée de la visite, unités consultées, filtres appliqués) avec le contenu de la discussion et les réactions du client.<br><br>Ce score devient un indicateur simple et actionnable pour les équipes de vente : il permet de prioriser les leads les plus prometteurs, d’identifier rapidement les clients à relancer et de concentrer l’énergie là où l’impact commercial sera le plus fort.<br><br>Pour les directions commerciales, c’est un nouveau niveau de visibilité sur la qualité du pipeline, en temps réel."
+            data-description-en="Atlas calculates a deal probability score by combining navigation data (visit duration, units viewed, filters used) with what was said during the meeting and how the client reacted.<br><br>The result is a simple, actionable indicator for sales teams: they can prioritize the most promising leads, identify who to follow up with first, and focus their energy where impact will be highest.<br><br>For sales leadership, it’s a new level of real-time visibility into pipeline quality."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Deal Probability Scoring</span>
+              <span class="lang-en">Deal Probability Scoring</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Score de probabilité de vente</span>
+              <span class="lang-en">Deal probability scoring</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                Atlas agrège durée de visite, unités consultées, filtres, mots-clés et signaux émotionnels pour estimer, en temps réel, les chances de conversion d’un acheteur.
+              </span>
+              <span class="lang-en">
+                Atlas combines visit duration, units viewed, filters, keywords and emotional signals to estimate, in real time, the likelihood of each buyer converting.
+              </span>
+            </p>
+            <ul class="card-list">
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Visualisation simple&nbsp;: <strong>“Probabilité de conversion&nbsp;: 72%”</strong>.</span>
+                <span class="lang-en">Simple visualization: <strong>“Likelihood to convert: 72%.”</strong></span>
+              </li>
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Priorisation automatique des leads chauds pour les équipes de vente.</span>
+                <span class="lang-en">Automatic prioritization of hot leads for your sales team.</span>
+              </li>
+            </ul>
+          </article>
+
+          <!-- Card: Follow-up -->
+          <article
+            class="card"
+            data-title-fr="Suivi automatisé et personnalisé"
+            data-title-en="Automated, personalized follow-up"
+            data-description-fr="Après chaque visite, Atlas génère automatiquement un courriel de suivi structuré autour de ce qui a réellement compté pour le client : unités consultées, points d’intérêt, questions soulevées et objections discutées.<br><br>Le courtier conserve le contrôle : il révise, ajuste le ton au besoin, puis envoie. Mais 80 % du travail est déjà fait. Résultat : des suivis plus rapides, plus cohérents d’un client à l’autre et surtout, parfaitement alignés avec le parcours réel dans Immersion.<br><br>Pour le promoteur, cela se traduit par une meilleure expérience client et une diminution du risque de laisser glisser des opportunités chaudes faute de temps."
+            data-description-en="After each visit, Atlas automatically drafts a follow-up email built around what actually mattered to the client: units they explored, topics that triggered interest, questions they asked, and objections that came up.<br><br>The broker stays in control: they review, adjust the tone, and send. But 80% of the work is already done. The result: faster, more consistent follow-ups, perfectly aligned with the real visit inside Immersion.<br><br>For the developer, that means a smoother buyer experience and fewer hot opportunities lost due to lack of time."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Follow-up IA</span>
+              <span class="lang-en">AI Follow-up</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Suivi automatisé et personnalisé</span>
+              <span class="lang-en">Automated, personalized follow-up</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                Après chaque visite, Atlas génère un courriel de suivi prêt à envoyer, aligné avec le parcours du client.
+              </span>
+              <span class="lang-en">
+                After each visit, Atlas generates a ready-to-send follow-up email, aligned with that client’s journey in Immersion.
+              </span>
+            </p>
+            <ul class="card-list">
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Rappel des unités consultées et préférées.</span>
+                <span class="lang-en">Highlights the units they viewed and preferred.</span>
+              </li>
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Réponses aux questions posées pendant la visite.</span>
+                <span class="lang-en">Covers the questions they asked during the visit.</span>
+              </li>
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Propositions d’alternatives et prochaines étapes (visite, réservation, documents).</span>
+                <span class="lang-en">Suggests alternatives and next steps (visit, reservation, documentation).</span>
+              </li>
+            </ul>
+          </article>
+        </div>
+
+        <aside class="section-side">
+          <!-- Card: Sales performance -->
+          <article
+            class="card"
+            data-title-fr="Analyse de performance des équipes de vente"
+            data-title-en="Sales team performance insights"
+            data-description-fr="Atlas remplace les impressions subjectives par des indicateurs clairs sur la performance de chaque courtier : durée moyenne des visites, taux de conversion, fréquence des suivis et façon dont les clients réagissent à leurs présentations.<br><br>L’outil met aussi en lumière les approches qui fonctionnent le mieux : thématiques qui reviennent dans les visites qui se concluent, structure de présentation efficace, équilibre entre écoute et argumentaire.<br><br>Pour les gestionnaires, c’est une base solide pour du coaching ciblé, pour l’alignement des messages-clés et pour récompenser les bonnes pratiques."
+            data-description-en="Atlas replaces subjective impressions with clear indicators on each broker’s performance: average visit duration, conversion rate, follow-up habits, and how clients actually respond to their presentations.<br><br>It also reveals the approaches that work best: topics that frequently show up in successful visits, presentation flows that convert, and the ideal balance between listening and talking.<br><br>For managers, it’s a solid foundation for targeted coaching, messaging alignment, and rewarding best practices."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Performance</span>
+              <span class="lang-en">Performance</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Analyse de performance des équipes de vente</span>
+              <span class="lang-en">Sales team performance insights</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                Atlas fournit une vision factuelle de la performance de chaque courtier, sans jugements subjectifs.
+              </span>
+              <span class="lang-en">
+                Atlas gives you a factual view of each broker’s performance — without relying on gut feeling.
+              </span>
+            </p>
+            <ul class="card-list">
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Durée moyenne des visites &amp; taux de conversion.</span>
+                <span class="lang-en">Average visit duration &amp; conversion rates.</span>
+              </li>
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Ratio parole / écoute et thématiques qui mènent à des ventes.</span>
+                <span class="lang-en">Talking / listening ratio, and topics that lead to a “yes”.</span>
+              </li>
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Suggestions de coaching ciblées.</span>
+                <span class="lang-en">Targeted coaching suggestions for each broker.</span>
+              </li>
+            </ul>
+          </article>
+
+          <!-- Card: Recommendations -->
+          <article
+            class="card"
+            data-title-fr="Moteur de recommandations d’unités"
+            data-title-en="Unit recommendation engine"
+            data-description-fr="En analysant les critères exprimés par le client (budget, vue, typologie, style de vie) et le parcours réel dans Immersion, Atlas suggère au courtier les unités les plus pertinentes à présenter à chaque moment.<br><br>L’IA se comporte comme un co-pilote silencieux : elle met en avant des options qui respectent les contraintes du client tout en maximisant les chances de conversion (surfaces, expositions, étages, disponibilités réelles).<br><br>Pour le client, l’expérience devient plus fluide et ciblée. Pour le promoteur, cela aide à mieux répartir la demande sur l’ensemble de l’inventaire."
+            data-description-en="By combining the client’s expressed criteria (budget, view, typology, lifestyle) with their actual journey inside Immersion, Atlas suggests the most relevant units to present at each step.<br><br>The AI behaves like a silent co-pilot: it surfaces options that respect constraints while maximizing conversion potential (layout, exposure, floor, real availability).<br><br>For the buyer, the experience feels curated and efficient. For the developer, demand is better balanced across the inventory."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Recommandations</span>
+              <span class="lang-en">Recommendations</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Moteur de recommandations d’unités</span>
+              <span class="lang-en">Unit recommendation engine</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                Atlas identifie en temps réel les unités les plus pertinentes selon le profil du visiteur.
+              </span>
+              <span class="lang-en">
+                Atlas identifies, in real time, the units that best match the buyer in front of you.
+              </span>
+            </p>
+            <p class="card-body" style="margin-top: 6px;">
+              <span class="lang-fr"><em>Exemple&nbsp;: “Le client aime le 904 mais souhaite une vue ouest → recommander 1004 et 1104.”</em></span>
+              <span class="lang-en"><em>Example: “Client likes 904 but wants a western view → suggest 1004 and 1104.”</em></span>
+            </p>
+          </article>
+        </aside>
+      </div>
+    </section>
+
+    <!-- BUYER INTELLIGENCE -->
+    <section id="buyer" class="section reveal">
+      <header class="section-header">
+        <div class="section-eyebrow">
+          <span class="lang-fr">Bloc 02</span>
+          <span class="lang-en">Block 02</span>
+        </div>
+        <h2 class="section-title">
+          <span class="highlight lang-fr">Intelligence acheteur</span>
+          <span class="highlight lang-en">Buyer intelligence</span>
+          <span class="lang-fr">— comprendre vraiment qui se trouve devant vous.</span>
+          <span class="lang-en">— truly understanding who’s in front of you.</span>
+        </h2>
+        <p class="section-tagline">
+          <span class="lang-fr">Atlas capte ce que les clients disent, font et ressentent pour personnaliser chaque présentation.</span>
+          <span class="lang-en">Atlas captures what buyers say, do, and feel to personalize every presentation.</span>
+        </p>
+      </header>
+
+      <div class="section-grid">
+        <div class="section-main">
+          <!-- Card: Emotion analysis -->
+          <article
+            class="card"
+            data-title-fr="Analyse émotionnelle en temps réel"
+            data-title-en="Real-time emotion analysis"
+            data-description-fr="Sans enregistrer d’image, Atlas analyse en local les expressions faciales pour détecter les moments de réel intérêt, de doute ou de retrait durant la visite.<br><br>Ces réactions sont ensuite synchronisées avec ce qui se passe à l’écran : une vue de balcon, une typologie trop serrée, un prix annoncé, une simulation d’ensoleillement… Le courtier obtient ainsi un retour objectif sur ce qui a réellement déclenché des émotions.<br><br>Pour le promoteur, ces données servent à valider les choix de design, d’architecture et de positionnement produit, en s’appuyant sur la réaction des acheteurs en situation réelle."
+            data-description-en="Without saving any image, Atlas locally analyzes facial expressions to detect moments of genuine interest, hesitation, or disengagement during the visit.<br><br>These reactions are then aligned with what was on screen: a balcony view, a tight floor plan, a price reveal, or a sunlight simulation. Brokers get objective feedback on the exact moments that triggered emotion.<br><br>For developers, this becomes powerful input to validate design, architecture and product positioning using real buyer reactions — not just opinions."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Emotion tracking</span>
+              <span class="lang-en">Emotion tracking</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Analyse émotionnelle en temps réel</span>
+              <span class="lang-en">Real-time emotion analysis</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                Via la webcam (analyse locale, aucune image conservée), Atlas détecte les réactions clés et les associe à des moments précis de la visite.
+              </span>
+              <span class="lang-en">
+                Using the webcam (local analysis, no images stored), Atlas detects key reactions and links them to precise moments of the visit.
+              </span>
+            </p>
+            <ul class="card-list">
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Engouement sur les vues de balcon.</span>
+                <span class="lang-en">Excitement when seeing balcony views.</span>
+              </li>
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Hésitation sur la taille de la cuisine ou le nombre de chambres.</span>
+                <span class="lang-en">Hesitation around kitchen size or bedroom count.</span>
+              </li>
+            </ul>
+            <div class="card-footer-note">
+              <span class="lang-fr">Chaque réaction devient un signal exploitable pour ajuster le discours en direct.</span>
+              <span class="lang-en">Every reaction becomes a signal to refine the pitch in real time.</span>
+            </div>
+          </article>
+
+          <!-- Card: Buyer intent -->
+          <article
+            class="card"
+            data-title-fr="Profil d’intention d’achat"
+            data-title-en="Buyer intent profiling"
+            data-description-fr="À partir des questions posées, des filtres utilisés, des unités explorées et du langage employé par le client, Atlas déduit un profil d’intention d’achat : investisseur, famille, premier acheteur, haut de gamme, style de vie, etc.<br><br>Ce profil n’est pas un stéréotype abstrait : il est relié à des préférences concrètes : rendement, confort, image, flexibilité à long terme…<br><br>Résultat : le courtier peut adapter immédiatement son argumentaire, et le promoteur visualise la vraie composition de sa clientèle pour mieux ajuster son offre et ses futures phases."
+            data-description-en="Based on the questions asked, filters used, units explored, and language used by the buyer, Atlas infers a buyer intent profile: investor, family, first-time buyer, premium, lifestyle-driven, and more.<br><br>This isn’t a vague persona — it’s anchored in concrete preferences: return, comfort, image, long-term flexibility, etc.<br><br>The broker can instantly adapt their pitch, while the developer gets a clear picture of who is actually attracted to each project or phase."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Profilage</span>
+              <span class="lang-en">Profiling</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Profil d’intention d’achat</span>
+              <span class="lang-en">Buyer intent profiling</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                En croisant comportement et discours, Atlas catégorise automatiquement le type d’acheteur.
+              </span>
+              <span class="lang-en">
+                By combining behaviour and conversation, Atlas automatically identifies the type of buyer in front of you.
+              </span>
+            </p>
+            <div class="chip-row">
+              <span class="chip">
+                <span class="lang-fr">Investisseur</span>
+                <span class="lang-en">Investor</span>
+              </span>
+              <span class="chip">
+                <span class="lang-fr">Famille</span>
+                <span class="lang-en">Family</span>
+              </span>
+              <span class="chip">
+                <span class="lang-fr">Premier acheteur</span>
+                <span class="lang-en">First-time buyer</span>
+              </span>
+              <span class="chip">
+                <span class="lang-fr">Haut de gamme</span>
+                <span class="lang-en">High-end</span>
+              </span>
+              <span class="chip">
+                <span class="lang-fr">Style de vie</span>
+                <span class="lang-en">Lifestyle</span>
+              </span>
+            </div>
+          </article>
+        </div>
+
+        <aside class="section-side">
+          <!-- Card: Needs extraction -->
+          <article
+            class="card"
+            data-title-fr="Extraction automatique des besoins"
+            data-title-en="Automatic needs extraction"
+            data-description-fr="Pendant la visite, le client partage spontanément une foule d’informations : sa fourchette de budget, ses contraintes, ses préférences de vue, ses besoins de stationnement ou de rangement.<br><br>Atlas écoute, structure et transforme ces éléments en champs concrets : budget cible, plage de prix tolérée, priorités absolues, concessions possibles. Le tout est ensuite poussé automatiquement dans le CRM du projet.<br><br>Cela réduit la charge administrative des courtiers, évite les oublis ou approximations et garantit que chaque suivi s’appuie sur une compréhension précise des besoins réels du client."
+            data-description-en="During a visit, buyers naturally share a lot: budget range, constraints, preferred views, parking needs, storage concerns and more.<br><br>Atlas listens, structures and converts this into clean fields: target budget, price flexibility, must-haves, and nice-to-haves. Everything is then pushed automatically into the project CRM.<br><br>This reduces administrative burden for brokers, avoids forgotten details, and ensures every follow-up is grounded in what the client actually needs."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">CRM sync</span>
+              <span class="lang-en">CRM sync</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Extraction automatique des besoins</span>
+              <span class="lang-en">Automatic needs extraction</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                Budget, vue souhaitée, nombre de chambres, besoin de stationnement, contraintes particulières…
+              </span>
+              <span class="lang-en">
+                Budget, preferred view, bedroom count, parking needs, specific constraints…
+              </span>
+            </p>
+            <p class="card-body" style="margin-top: 6px;">
+              <span class="lang-fr">
+                Atlas extrait ces informations de la transcription et du comportement, puis les inscrit directement dans le CRM du projet, sans effort supplémentaire pour le courtier.
+              </span>
+              <span class="lang-en">
+                Atlas extracts these details from the transcript and behaviour, then writes them directly into your CRM — without extra work for the sales team.
+              </span>
+            </p>
+          </article>
+        </aside>
+      </div>
+    </section>
+
+    <!-- PROMOTER / DEVELOPER INTELLIGENCE -->
+    <section id="promoter" class="section reveal">
+      <header class="section-header">
+        <div class="section-eyebrow">
+          <span class="lang-fr">Bloc 03</span>
+          <span class="lang-en">Block 03</span>
+        </div>
+        <h2 class="section-title">
+          <span class="highlight lang-fr">Intelligence promoteur</span>
+          <span class="highlight lang-en">Developer intelligence</span>
+          <span class="lang-fr">— piloter vos projets avec une clarté nouvelle.</span>
+          <span class="lang-en">— steering your projects with new clarity.</span>
+        </h2>
+        <p class="section-tagline">
+          <span class="lang-fr">Atlas donne enfin aux promoteurs une vision consolidée et actionnable de la demande réelle.</span>
+          <span class="lang-en">Atlas finally gives developers a consolidated, actionable view of real demand.</span>
+        </p>
+      </header>
+
+      <div class="section-grid">
+        <div class="section-main">
+          <!-- Card: Heatmap -->
+          <article
+            class="card"
+            data-title-fr="Carte thermique des comportements"
+            data-title-en="Behaviour heatmap"
+            data-description-fr="La carte thermique Atlas traduit des milliers de visites en une vision simple : quelles unités attirent l’attention, lesquelles sont ignorées et quels attributs déclenchent véritablement l’intérêt (vue, étage, orientation, typologie, surfaces, etc.).<br><br>Plutôt que de se fier uniquement aux impressions des équipes, le promoteur accède à une photographie objective de la demande, projet par projet, phase par phase.<br><br>Ce niveau de granularité permet de mieux préparer les phases suivantes, d’ajuster les plans d’unités et d’anticiper les zones de tension : unités qui partiront très vite, ou au contraire, qui risquent de traîner."
+            data-description-en="Atlas’ heatmap translates thousands of visits into a simple view: which units draw attention, which are ignored, and which attributes actually drive interest (view, floor, orientation, typology, size, and more).<br><br>Instead of relying solely on feedback from the field, developers get an objective picture of demand — project by project, phase by phase.<br><br>This level of granularity helps you prepare future phases, adjust floor plans, and anticipate pressure points: units that will sell instantly, and those that might lag behind."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Comportement</span>
+              <span class="lang-en">Behaviour</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Carte thermique des comportements</span>
+              <span class="lang-en">Behaviour heatmap</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                Visualisez, en un coup d’œil, ce qui capte l’attention et ce qui reste ignoré.
+              </span>
+              <span class="lang-en">
+                See, at a glance, what attracts attention — and what gets ignored.
+              </span>
+            </p>
+            <ul class="card-list">
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Unités les plus consultées vs. unités invisibles.</span>
+                <span class="lang-en">Most-viewed units vs. units that remain invisible.</span>
+              </li>
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Caractéristiques qui déclenchent des réactions positives : vues, étages, finitions, typologies.</span>
+                <span class="lang-en">Features that trigger strong reactions: views, floors, finishes, typologies.</span>
+              </li>
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Compréhension fine de la demande avant même l’ouverture officielle des ventes.</span>
+                <span class="lang-en">A precise read on demand, even before official launch.</span>
+              </li>
+            </ul>
+          </article>
+
+          <!-- Card: Pricing suggestions -->
+          <article
+            class="card"
+            data-title-fr="Suggestions d’optimisation des prix"
+            data-title-en="Pricing optimization suggestions"
+            data-description-fr="En croisant l’intérêt généré par chaque unité (nombre de visites, temps passé, retours verbaux) avec son statut réel (réservée, en option, encore disponible), Atlas repère les incohérences de positionnement.<br><br>Certaines unités sont sur-consultées mais jamais réservées : le signal est fort qu’un frein existe, souvent lié au prix ou à un détail produit. D’autres, au contraire, se vendent extrêmement vite : elles auraient pu être mieux valorisées.<br><br>Plutôt que d’ajuster à l’aveugle, le promoteur dispose de recommandations concrètes pour optimiser les prix et la structure d’offre par typologie."
+            data-description-en="By combining interest for each unit (visits, time spent, spoken feedback) with its actual status (reserved, on hold, still available), Atlas spots pricing inconsistencies.<br><br>Some units are over-viewed but never reserved: a strong signal that something—often pricing or product positioning—is off. Others sell almost instantly: a sign that they could have been valued higher.<br><br>Instead of adjusting blindly, the developer gets concrete recommendations to optimize pricing and offering by typology."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Pricing</span>
+              <span class="lang-en">Pricing</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Suggestions d’optimisation des prix</span>
+              <span class="lang-en">Pricing optimization suggestions</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                Atlas détecte les unités sur-demandées mais non réservées, ainsi que celles surévaluées ou sous-évaluées.
+              </span>
+              <span class="lang-en">
+                Atlas detects over-demanded units that never convert, as well as those over- or under-priced.
+              </span>
+            </p>
+            <p class="card-body" style="margin-top: 6px;">
+              <span class="lang-fr">
+                <em>Exemple&nbsp;: “L’unité 1503 est 4× plus consultée que ses comparables, mais jamais réservée → revoir le prix ou le positionnement.”</em>
+              </span>
+              <span class="lang-en">
+                <em>Example: “Unit 1503 is viewed 4× more than its peers yet never reserved → revisit pricing or positioning.”</em>
+              </span>
+            </p>
+          </article>
+        </div>
+
+        <aside class="section-side">
+          <!-- Card: Marketing attribution -->
+          <article
+            class="card"
+            data-title-fr="Attribution marketing pilotée par l’IA"
+            data-title-en="AI-driven marketing attribution"
+            data-description-fr="Atlas relie les visites qualifiées et les réservations à leurs canaux d’origine : campagnes numériques, infolettres, réseaux sociaux, référencement, évènements, etc.<br><br>Plutôt que de simplement mesurer le trafic, l’outil met en avant la qualité des leads par source : quel canal amène des visiteurs réellement engagés, qui avancent dans le tunnel et finissent par réserver.<br><br>Cela permet au promoteur et à son agence média de réallouer le budget vers les canaux réellement performants, de tester de nouvelles approches et de justifier chaque décision d’investissement avec des données concrètes tirées du comportement dans Immersion."
+            data-description-en="Atlas connects qualified visits and reservations back to their acquisition channels: digital campaigns, email, social, SEO, events, and more.<br><br>Instead of just counting traffic, Atlas focuses on lead quality by source: which channels bring visitors who truly engage, move through the funnel, and eventually reserve.<br><br>This lets developers and media agencies reallocate spend to what actually works, test new strategies, and justify marketing decisions using real behavioural data from Immersion."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Marketing ROI</span>
+              <span class="lang-en">Marketing ROI</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Attribution marketing pilotée par l’IA</span>
+              <span class="lang-en">AI-driven marketing attribution</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                Atlas relie visites, qualité des leads et conversions aux bons canaux marketing :
+              </span>
+              <span class="lang-en">
+                Atlas ties visits, lead quality and conversions back to the right marketing channels:
+              </span>
+            </p>
+            <ul class="card-list">
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Google Ads, Facebook, YouTube, campagnes courriel.</span>
+                <span class="lang-en">Google Ads, Facebook, YouTube, email campaigns.</span>
+              </li>
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Origines du trafic web et de vos formulaires.</span>
+                <span class="lang-en">Traffic origin and form submissions by source.</span>
+              </li>
+            </ul>
+            <div class="card-footer-note">
+              <span class="lang-fr">Enfin une vue précise du rendement réel de chaque dollar investi en acquisition.</span>
+              <span class="lang-en">Finally, a clear view of the real return on every dollar invested in acquisition.</span>
+            </div>
+          </article>
+
+          <!-- Card: Monthly reports -->
+          <article
+            class="card"
+            data-title-fr="Rapports mensuels automatisés"
+            data-title-en="Automated monthly reports"
+            data-description-fr="Chaque mois, Atlas compile l’ensemble des données du projet en un rapport PDF clair et exploitable : volumes de visites, profils d’acheteurs, unités vedettes, objections récurrentes et performance des équipes de vente.<br><br>L’objectif n’est pas de noyer le promoteur sous les chiffres, mais de lui livrer une lecture stratégique prête à être discutée en comité : ce qui fonctionne, ce qui bloque, et où se trouvent les opportunités.<br><br>Le rapport devient un outil de pilotage récurrent du projet, au même titre qu’un suivi de chantier ou un tableau de bord financier."
+            data-description-en="Every month, Atlas compiles all project data into a clear, actionable PDF report: visit volumes, buyer profiles, star units, recurring objections, and sales team performance.<br><br>The goal is not to flood you with numbers, but to deliver a strategic readout ready for leadership meetings: what works, what doesn’t, and where the opportunities lie.<br><br>The report becomes a recurring steering tool for the project, just like a construction update or financial dashboard."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Reporting</span>
+              <span class="lang-en">Reporting</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Rapports mensuels automatisés</span>
+              <span class="lang-en">Automated monthly reports</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                Atlas génère un rapport PDF clé en main pour chaque projet :
+              </span>
+              <span class="lang-en">
+                Atlas generates a turnkey PDF report for each project:
+              </span>
+            </p>
+            <ul class="card-list">
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Trafic, profils d’acheteurs et unités vedettes.</span>
+                <span class="lang-en">Traffic, buyer profiles and top-performing units.</span>
+              </li>
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Objections récurrentes et performance des équipes.</span>
+                <span class="lang-en">Recurring objections and sales team performance.</span>
+              </li>
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">Recommandations stratégiques prêtes à discuter en comité de direction.</span>
+                <span class="lang-en">Strategic recommendations, ready for boardroom discussions.</span>
+              </li>
+            </ul>
+          </article>
+        </aside>
+      </div>
+    </section>
+
+    <!-- AUTOMATION & AI GUIDANCE -->
+    <section id="automation" class="section reveal">
+      <header class="section-header">
+        <div class="section-eyebrow">
+          <span class="lang-fr">Bloc 04</span>
+          <span class="lang-en">Block 04</span>
+        </div>
+        <h2 class="section-title">
+          <span class="highlight lang-fr">Visites &amp; guidance IA</span>
+          <span class="highlight lang-en">Tours &amp; AI guidance</span>
+          <span class="lang-fr">— du co-pilote à la visite autonome.</span>
+          <span class="lang-en">— from co-pilot mode to fully assisted tours.</span>
+        </h2>
+        <p class="section-tagline">
+          <span class="lang-fr">Atlas ne se contente pas d’observer : il sait aussi guider, suggérer et accompagner.</span>
+          <span class="lang-en">Atlas doesn’t just observe: it can guide, suggest and assist along the way.</span>
+        </p>
+      </header>
+
+      <div class="section-grid">
+        <div class="section-main">
+          <!-- Card: Co-pilot -->
+          <article
+            class="card"
+            data-title-fr="Mode co-pilote pour les courtiers"
+            data-title-en="Co-pilot mode for brokers"
+            data-description-fr="Pendant une visite, Atlas écoute ce qui se dit, observe ce qui se passe à l’écran et propose discrètement des actions au courtier : montrer un étage plus élevé, activer la simulation soleil, comparer deux typologies proches, etc.<br><br>Le courtier garde la main sur la visite, mais bénéficie à chaque instant d’un assistant qui lui rappelle les priorités du client et lui suggère la meilleure prochaine étape.<br><br>Cela réduit le risque d’oublier une option pertinente, rassure les profils plus juniors et harmonise la qualité des présentations à travers l’équipe."
+            data-description-en="During a visit, Atlas listens to the conversation, tracks what’s shown on screen, and quietly suggests next actions to the broker: show a higher floor, switch to sun simulation, compare two close typologies, and more.<br><br>The broker stays in control of the visit, but benefits from an assistant that keeps the buyer’s priorities top-of-mind and suggests the best next move.<br><br>This reduces the risk of missing a key option, supports junior team members, and raises the overall consistency of presentations."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Co-pilote</span>
+              <span class="lang-en">Co-pilot</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Mode co-pilote pour les courtiers</span>
+              <span class="lang-en">Co-pilot mode for brokers</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                Pendant une visite en présentiel ou à distance, Atlas écoute et propose discrètement des actions au courtier.
+              </span>
+              <span class="lang-en">
+                During on-site or remote visits, Atlas listens and discreetly suggests what the broker should do next.
+              </span>
+            </p>
+            <ul class="card-list">
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">“Montre-lui les étages supérieurs.”</span>
+                <span class="lang-en">“Show them the higher floors.”</span>
+              </li>
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">“Passe en simulation soleil, la lumière est un enjeu pour eux.”</span>
+                <span class="lang-en">“Switch to sun simulation — light matters to them.”</span>
+              </li>
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">“Avec un budget de 1M, l’unité 1803 est parfaitement alignée.”</span>
+                <span class="lang-en">“With a $1M budget, unit 1803 is perfectly aligned.”</span>
+              </li>
+            </ul>
+          </article>
+
+          <!-- Card: Remote visits -->
+          <article
+            class="card"
+            data-title-fr="Visites à distance automatisées"
+            data-title-en="Automated remote visits"
+            data-description-fr="En dehors des heures d’ouverture, Atlas peut prendre le relais : accueillir un visiteur en ligne, comprendre ses besoins de base, lui présenter une sélection d’unités et lui permettre d’explorer le projet de manière structurée.<br><br>À la fin de la session, un résumé complet est envoyé à l’équipe de vente : profil du client, unités visitées, réactions clés, points à valider. Le courtier peut ensuite reprendre le dossier avec un coup de fil ou un courriel ciblé.<br><br>Cela permet d’exploiter le trafic généré en soirée, la fin de semaine ou lors de campagnes numériques intensives, sans épuiser les équipes sur place."
+            data-description-en="Outside of opening hours, Atlas can take over: welcome a visitor online, understand their basic needs, present a selection of units, and guide them through a structured exploration of the project.<br><br>At the end of the session, a full summary is sent to the sales team: buyer profile, units visited, key reactions, and points to confirm. The broker can then take over with a targeted call or email.<br><br>This lets you fully leverage traffic in evenings, weekends, or peak campaign periods — without burning out your teams."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Remote</span>
+              <span class="lang-en">Remote</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Visites à distance automatisées</span>
+              <span class="lang-en">Automated remote visits</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                En dehors des heures d’ouverture, Atlas peut accueillir les visiteurs, présenter le projet et envoyer un résumé complet à l’équipe de vente le lendemain.
+              </span>
+              <span class="lang-en">
+                When your showroom is closed, Atlas can still welcome visitors, present the project and deliver a full summary to the sales team the next day.
+              </span>
+            </p>
+            <div class="card-footer-note">
+              <span class="lang-fr">Votre projet reste “ouvert” 24/7, sans surcharger vos équipes.</span>
+              <span class="lang-en">Your project is effectively “open” 24/7 — without overloading your teams.</span>
+            </div>
+          </article>
+        </div>
+
+        <aside class="section-side">
+          <!-- Card: Virtual guide -->
+          <article
+            class="card"
+            data-title-fr="Guide virtuel alimenté par l’IA"
+            data-title-en="AI-powered virtual guide"
+            data-description-fr="À moyen terme, Atlas pourra piloter Immersion de bout en bout, comme un courtier virtuel : se déplacer dans le projet, changer de vues, filtrer les unités, comparer des options et répondre à des questions complexes sur le produit.<br><br>Ce guide virtuel pourra prendre en charge des volumes élevés de leads en début de cycle, qualifier les clients et les orienter vers les unités les plus adaptées avant même que l’équipe de vente ne prenne le relais.<br><br>Pour les projets d’envergure ou très médiatisés, c’est une façon d’absorber les pics d’intérêt sans perdre de qualité ni saturer les ressources humaines."
+            data-description-en="Over time, Atlas will be able to pilot Immersion end-to-end as a virtual broker: moving through the project, changing views, applying filters, comparing options and answering complex questions about the product.<br><br>This virtual guide can handle large volumes of early-stage leads, qualify them, and direct them toward the best-fit units before a human broker steps in.<br><br>For flagship or highly publicized projects, it’s a way to absorb intense interest without compromising quality or overextending your team."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Vision</span>
+              <span class="lang-en">Vision</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Guide virtuel alimenté par l’IA (vision)</span>
+              <span class="lang-en">AI-powered virtual guide (vision)</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                À moyen terme, Atlas pourra naviguer Immersion comme un courtier : se déplacer dans le projet, filtrer, zoomer, comparer, et répondre aux questions de l’acheteur en direct.
+              </span>
+              <span class="lang-en">
+                In the medium term, Atlas will be able to navigate Immersion like a broker: move through the project, filter, zoom, compare, and answer questions live.
+              </span>
+            </p>
+            <div class="card-footer-note">
+              <span class="lang-fr">Un véritable “agent virtuel” Immersion, pour les projets à très fort volume de leads.</span>
+              <span class="lang-en">A true “virtual agent” for Immersion, built for projects with very high lead volume.</span>
+            </div>
+          </article>
+        </aside>
+      </div>
+    </section>
+
+    <!-- VOICE & TEXT ASSISTANT -->
+    <section id="assistant" class="section reveal">
+      <header class="section-header">
+        <div class="section-eyebrow">
+          <span class="lang-fr">Bloc 05</span>
+          <span class="lang-en">Block 05</span>
+        </div>
+        <h2 class="section-title">
+          <span class="highlight lang-fr">Assistant “Dis Atlas…”</span>
+          <span class="highlight lang-en">“Hey Atlas…” assistant</span>
+          <span class="lang-fr">— une intelligence toujours à portée de voix.</span>
+          <span class="lang-en">— intelligence, always one question away.</span>
+        </h2>
+        <p class="section-tagline">
+          <span class="lang-fr">Qu’il s’agisse d’un courtier, d’un promoteur ou d’un acheteur, Atlas répond instantanément aux questions clés.</span>
+          <span class="lang-en">Whether it’s a broker, a developer or a buyer, Atlas answers key questions instantly.</span>
+        </p>
+      </header>
+
+      <div class="section-grid">
+        <div class="section-main">
+          <!-- Card: Q&A -->
+          <article
+            class="card"
+            data-title-fr="Questions en temps réel dans Immersion"
+            data-title-en="Real-time questions inside Immersion"
+            data-description-fr="L’assistant “Dis Atlas…” permet aux utilisateurs d’interroger directement la plateforme en langage naturel, sans devoir naviguer dans des menus ou des tableaux complexes.<br><br>Un courtier peut demander de filtrer les unités correspondant à un budget donné, une vue spécifique ou une configuration précise. Un promoteur peut obtenir en quelques secondes les unités les plus consultées cette semaine, ou les typologies qui performent le mieux.<br><br>Cette couche conversationnelle rend Immersion encore plus accessible, même pour des utilisateurs occasionnels ou des intervenants externes à l’équipe de vente."
+            data-description-en="The “Hey Atlas…” assistant lets users query the platform in natural language, without digging through menus or dashboards.<br><br>A broker can ask to see units under a specific budget, with a given view, or matching precise criteria. A developer can get, in seconds, the week’s most popular units or best-performing typologies.<br><br>This conversational layer makes Immersion accessible even to occasional users and external stakeholders."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Q&amp;A</span>
+              <span class="lang-en">Q&amp;A</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Questions en temps réel dans Immersion</span>
+              <span class="lang-en">Real-time questions inside Immersion</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                Atlas répond à la voix ou au clavier à des questions comme :
+              </span>
+              <span class="lang-en">
+                Atlas answers voice or text questions like:
+              </span>
+            </p>
+            <ul class="card-list">
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">“Quelles unités donnent sur le fleuve sous 700&nbsp;000&nbsp;$ ?”</span>
+                <span class="lang-en">“Which units face the river under $700,000?”</span>
+              </li>
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">“Affiche les unités au-dessus du 20<sup>e</sup> étage avec stationnement.”</span>
+                <span class="lang-en">“Show me units above the 20th floor with parking.”</span>
+              </li>
+              <li>
+                <span class="card-bullet"></span>
+                <span class="lang-fr">“Quelles sont les unités les plus populaires cette semaine ?”</span>
+                <span class="lang-en">“What are the most popular units this week?”</span>
+              </li>
+            </ul>
+          </article>
+
+          <!-- Card: Knowledge engine -->
+          <article
+            class="card"
+            data-title-fr="Moteur de connaissances Atlas"
+            data-title-en="Atlas knowledge engine"
+            data-description-fr="Au-delà des données de vente, Atlas consolide toutes les informations pertinentes autour du projet : fiches techniques, commodités, environnement urbain, temps de déplacement, informations sur le promoteur, comparatifs avec d’autres projets, etc.<br><br>L’assistant devient ainsi un point d’entrée unique pour répondre aux questions des acheteurs, des courtiers et des partenaires, sans devoir fouiller dans plusieurs documents ou outils.<br><br>C’est une manière de capitaliser sur tout le contenu produit autour du projet et de le rendre enfin accessible, au bon moment, à la bonne personne."
+            data-description-en="Beyond sales data, Atlas consolidates all relevant information around the project: technical sheets, amenities, urban context, commuting times, information about the developer, comparisons with other projects, and more.<br><br>The assistant becomes a single entry point to answer questions from buyers, brokers and partners, without searching through multiple tools or PDFs.<br><br>It’s a way to leverage all the content created around the project and make it truly accessible at the right time, to the right person."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Connaissance</span>
+              <span class="lang-en">Knowledge</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Moteur de connaissances Atlas</span>
+              <span class="lang-en">Atlas knowledge engine</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                Atlas consolide les informations du projet et de son environnement : commodités, transports, temps de déplacement, détails sur le promoteur, comparatifs avec d’autres projets.
+              </span>
+              <span class="lang-en">
+                Atlas consolidates project and context information: amenities, transit, travel times, developer details, and market comparisons.
+              </span>
+            </p>
+          </article>
+        </div>
+
+        <aside class="section-side">
+          <!-- Card: Objection handling -->
+          <article
+            class="card"
+            data-title-fr="Gestion des objections assistée"
+            data-title-en="AI-assisted objection handling"
+            data-description-fr="Lorsqu’un client exprime un doute — balcon jugé trop petit, impression de manque de rangement, perception de prix élevé — Atlas peut suggérer au courtier, en temps réel, des angles de réponse ou des alternatives pertinentes.<br><br>L’outil s’appuie sur ce qui a déjà fonctionné dans d’autres visites, sur les atouts objectifs du projet et sur les unités comparables disponibles dans l’inventaire.<br><br>Au lieu de subir l’objection, le courtier la transforme en opportunité de mieux expliquer la valeur du projet ou de rediriger vers une option mieux alignée, sans perdre le fil de la visite."
+            data-description-en="When a buyer raises a concern — balcony feels too small, not enough storage, price seems high — Atlas can suggest, in real time, ways to respond or alternatives to propose.<br><br>It draws on what has worked in past visits, on the objective strengths of the project, and on comparable units available in the inventory.<br><br>Instead of being thrown off by objections, brokers can use them as opportunities to re-frame value or redirect towards a better-fit option, without losing the rhythm of the visit."
+          >
+            <div class="card-label">
+              <span class="card-label-dot"></span>
+              <span class="lang-fr">Objections</span>
+              <span class="lang-en">Objections</span>
+            </div>
+            <h3 class="card-title">
+              <span class="lang-fr">Gestion des objections assistée</span>
+              <span class="lang-en">AI-assisted objection handling</span>
+            </h3>
+            <p class="card-body">
+              <span class="lang-fr">
+                Quand un acheteur soulève un frein (“balcon trop petit”, “manque de rangement”, “prix élevé”), Atlas peut suggérer en temps réel la meilleure réponse ou alternative.
+              </span>
+              <span class="lang-en">
+                When a buyer expresses a concern (“balcony too small”, “not enough storage”, “too expensive”), Atlas suggests the best response or alternative in real time.
+              </span>
+            </p>
+          </article>
+        </aside>
+      </div>
+    </section>
+
+    <!-- SUMMARY -->
+    <section class="summary reveal">
+      <div class="summary-inner">
+        <h2 class="summary-title">
+          <span class="lang-fr">En résumé — Atlas comme cœur intelligent d’Immersion</span>
+          <span class="lang-en">In summary — Atlas as the intelligent core of Immersion</span>
+        </h2>
+        <p class="summary-body">
+          <span class="lang-fr">
+            Immersion Atlas transforme la plateforme en un écosystème véritablement intelligent : il observe, comprend, suggère et anticipe. C’est une couche d’analyse et de guidance qui relie les besoins réels des acheteurs, la réalité du terrain des courtiers et les enjeux stratégiques des promoteurs.
+          </span>
+          <span class="lang-en">
+            Immersion Atlas turns the platform into a truly intelligent ecosystem: it observes, understands, suggests and anticipates. It’s an analysis and guidance layer that connects real buyer needs, the day-to-day reality of brokers, and the strategic priorities of developers.
+          </span>
+        </p>
+        <p class="summary-tagline">
+          <span class="lang-fr">
+            Avec Atlas, Immersion ne se contente plus de montrer vos projets — il explique pourquoi ils se vendent, comment les optimiser et où concentrer vos efforts pour maximiser la valeur.
+          </span>
+          <span class="lang-en">
+            With Atlas, Immersion doesn’t just show your projects — it explains why they sell, how to optimize them, and where to focus to maximize value.
+          </span>
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal Popup -->
+  <div id="atlas-modal" class="atlas-modal">
+    <div class="atlas-modal-content">
+      <button class="atlas-modal-close">✕</button>
+      <h2 class="atlas-modal-title"></h2>
+      <p class="atlas-modal-text"></p>
+    </div>
+  </div>
+
+  <script>
+    // Custom cursor (skip on touch/mobile devices)
+    (function () {
+      // Detect touch/mobile devices and skip custom cursor
+      const isTouchDevice = window.matchMedia("(pointer: coarse)").matches ||
+                            window.matchMedia("(hover: none)").matches ||
+                            navigator.maxTouchPoints > 0;
+      if (isTouchDevice) return;
+
+      const dot = document.querySelector(".cursor-dot");
+      const outline = document.querySelector(".cursor-outline");
+      let mouseX = window.innerWidth / 2;
+      let mouseY = window.innerHeight / 2;
+
+      if (!dot || !outline) return;
+
+      document.addEventListener("mousemove", (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        dot.style.transform = `translate(${mouseX}px, ${mouseY}px)`;
+      });
+
+      const render = () => {
+        outline.style.transform = `translate(${mouseX}px, ${mouseY}px)`;
+        requestAnimationFrame(render);
+      };
+      render();
+    })();
+
+    // Scroll reveal
+    (function () {
+      const reveals = document.querySelectorAll(".reveal");
+      if (!("IntersectionObserver" in window) || !reveals.length) {
+        reveals.forEach((el) => el.classList.add("visible"));
+        return;
+      }
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("visible");
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.18 }
+      );
+
+      reveals.forEach((el) => observer.observe(el));
+    })();
+
+    // Parallax background orbs - disabled for seamless scrolling
+    // The orbs now stay fixed in position to prevent horizontal line artifacts
+
+    // Language switcher
+    (function () {
+      const buttons = document.querySelectorAll("[data-lang-switch]");
+      const body = document.body;
+
+      const updateUI = (lang) => {
+        body.setAttribute("data-lang", lang);
+        buttons.forEach(btn => {
+          if (btn.getAttribute("data-lang-switch") === lang) {
+            btn.classList.add("active");
+          } else {
+            btn.classList.remove("active");
+          }
+        });
+      };
+
+      buttons.forEach(btn => {
+        btn.addEventListener("click", () => {
+          const lang = btn.getAttribute("data-lang-switch") || "fr";
+          updateUI(lang);
+        });
+      });
+
+      // Initial
+      const initialLang = body.getAttribute("data-lang") || "fr";
+      updateUI(initialLang);
+    })();
+
+    // Modal logic for Atlas cards
+    (function () {
+      const modal = document.getElementById("atlas-modal");
+      const modalTitle = document.querySelector(".atlas-modal-title");
+      const modalText = document.querySelector(".atlas-modal-text");
+      const modalClose = document.querySelector(".atlas-modal-close");
+      const body = document.body;
+
+      if (!modal || !modalTitle || !modalText || !modalClose) return;
+
+      const cards = document.querySelectorAll(".card[data-title-fr]");
+
+      cards.forEach(card => {
+        card.addEventListener("click", (e) => {
+          e.stopPropagation();
+
+          const lang = body.getAttribute("data-lang") || "fr";
+          const titleAttr = lang === "en" ? "data-title-en" : "data-title-fr";
+          const descAttr = lang === "en" ? "data-description-en" : "data-description-fr";
+
+          const title = card.getAttribute(titleAttr) || "";
+          const description = card.getAttribute(descAttr) || "";
+
+          modalTitle.textContent = title;
+          modalText.innerHTML = description;
+          modal.classList.add("visible");
+        });
+      });
+
+      modalClose.addEventListener("click", () => {
+        modal.classList.remove("visible");
+      });
+
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+          modal.classList.remove("visible");
+        }
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          modal.classList.remove("visible");
+        }
+      });
+    })();
+  </script>
+
+  <!-- Atlas chatbot trigger (Scroll.ai) -->
+  <button
+    type="button"
+    class="scroll-expert-trigger immersion-ai-button"
+    data-expert="cn_01kesh50b4fw4se6y5v6dea92z"
+    data-token="embed_01khkm511cefdvfwswrrx3fn5t"
+    aria-label="Chat with Atlas">
+
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 3L13.5 7.5L18 9L13.5 10.5L12 15L10.5 10.5L6 9L10.5 7.5L12 3Z" fill="white"/>
+      <path d="M18.5 14L19.3 16L21.3 16.8L19.3 17.6L18.5 19.6L17.7 17.6L15.7 16.8L17.7 16L18.5 14Z" fill="white" opacity="0.7"/>
+      <path d="M6 15.5L6.6 17L8 17.6L6.6 18.2L6 19.6L5.4 18.2L4 17.6L5.4 17L6 15.5Z" fill="white" opacity="0.6"/>
+    </svg>
+  </button>
+
+</body>
+</html>
