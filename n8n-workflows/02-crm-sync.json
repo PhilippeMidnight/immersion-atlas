@@ -1,0 +1,180 @@
+{
+  "name": "Atlas CRM Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "atlas-crm-sync",
+        "responseMode": "lastNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Atlas CRM Event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse and normalize the Atlas MCP CRM operation result\nconst body = $input.first().json.body || $input.first().json;\n\nreturn [{\n  json: {\n    operation: body.operation,\n    project_id: body.project_id,\n    crm_record_id: body.crm_record_id,\n    status: body.status,\n    source_agent: body.source_agent || 'unknown',\n    payload: body.payload || {},\n    applied_changes: body.applied_changes || [],\n    timestamp: new Date().toISOString(),\n  }\n}];"
+      },
+      "id": "parse-event",
+      "name": "Parse CRM Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.operation }}", "rightValue": "create_lead", "operator": { "type": "string", "operation": "equals" } }]
+              },
+              "renameOutput": true,
+              "outputKey": "new_lead"
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.operation }}", "rightValue": "update_stage", "operator": { "type": "string", "operation": "equals" } }]
+              },
+              "renameOutput": true,
+              "outputKey": "stage_change"
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.operation }}", "rightValue": "append_note", "operator": { "type": "string", "operation": "equals" } }]
+              },
+              "renameOutput": true,
+              "outputKey": "note_added"
+            }
+          ],
+          "fallbackOutput": {
+            "renameOutput": true,
+            "outputKey": "other"
+          }
+        }
+      },
+      "id": "route-operation",
+      "name": "Route by Operation",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/contacts?id=eq.{{ $json.crm_record_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=representation" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"last_interaction_at\": \"{{ $json.timestamp }}\",\n  \"session_count\": \"{{ ($json.payload?.session_count || 1) }}\"\n}"
+      },
+      "id": "update-contact-stats",
+      "name": "Update Contact Stats (New Lead)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 150]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_URL }}/webhook/atlas-lead-created",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "trigger-lead-routing",
+      "name": "Trigger Lead Routing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1180, 150]
+    },
+    {
+      "parameters": {
+        "channel": "#sales-atlas",
+        "text": "=📊 *Stage Change*\n\nContact `{{ $json.crm_record_id }}` moved to *{{ $json.payload?.stage }}*\nProject: {{ $json.project_id }}\nBy agent: {{ $json.source_agent }}",
+        "otherOptions": {}
+      },
+      "id": "slack-stage-change",
+      "name": "Slack: Stage Change",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [960, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/atlas_interactions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contact_id\": \"{{ $json.crm_record_id }}\",\n  \"session_id\": \"{{ $json.payload?.session_id || 'n8n-sync' }}\",\n  \"interaction_type\": \"note\",\n  \"channel\": \"internal\",\n  \"summary\": \"{{ $json.payload?.note || 'Note added via Atlas' }}\",\n  \"agent_slug\": \"{{ $json.source_agent }}\"\n}"
+      },
+      "id": "log-interaction",
+      "name": "Log Interaction (Note)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log other operations for monitoring\nconst event = $input.first().json;\nconsole.log(`Atlas CRM event: ${event.operation}`, JSON.stringify(event));\nreturn [{ json: { logged: true, operation: event.operation } }];"
+      },
+      "id": "log-other",
+      "name": "Log Other Operations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 600]
+    }
+  ],
+  "connections": {
+    "Webhook: Atlas CRM Event": {
+      "main": [[{ "node": "Parse CRM Event", "type": "main", "index": 0 }]]
+    },
+    "Parse CRM Event": {
+      "main": [[{ "node": "Route by Operation", "type": "main", "index": 0 }]]
+    },
+    "Route by Operation": {
+      "main": [
+        [{ "node": "Update Contact Stats (New Lead)", "type": "main", "index": 0 }],
+        [{ "node": "Slack: Stage Change", "type": "main", "index": 0 }],
+        [{ "node": "Log Interaction (Note)", "type": "main", "index": 0 }],
+        [{ "node": "Log Other Operations", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Contact Stats (New Lead)": {
+      "main": [[{ "node": "Trigger Lead Routing", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Receives all Atlas MCP CRM operation callbacks. Routes by operation type: new leads trigger routing, stage changes notify Slack, notes get logged as interactions."
+  }
+}

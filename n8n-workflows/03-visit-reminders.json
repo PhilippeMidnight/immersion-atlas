@@ -1,0 +1,114 @@
+{
+  "name": "Atlas Visit Reminders",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 1 }]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/atlas_visits?status=eq.scheduled&scheduled_at=gte.{{ new Date().toISOString() }}&scheduled_at=lte.{{ new Date(Date.now() + 24*60*60*1000).toISOString() }}&select=*,contacts(first_name,last_name,email,phone,language),building_groups(name)",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" }
+          ]
+        }
+      },
+      "id": "fetch-upcoming-visits",
+      "name": "Fetch Upcoming Visits (24h)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.length }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ]
+        }
+      },
+      "id": "has-visits",
+      "name": "Any Visits?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split visits into individual items and format for notifications\nconst visits = $input.first().json;\nif (!Array.isArray(visits)) return [];\n\nreturn visits.map(visit => {\n  const contact = visit.contacts || {};\n  const group = visit.building_groups || {};\n  const visitDate = new Date(visit.scheduled_at);\n  const hoursUntil = Math.round((visitDate - Date.now()) / (1000 * 60 * 60));\n  \n  const isEnglish = contact.language === 'en';\n  \n  return {\n    json: {\n      visit_id: visit.id,\n      contact_email: contact.email,\n      contact_name: `${contact.first_name || ''} ${contact.last_name || ''}`.trim(),\n      contact_phone: contact.phone,\n      language: contact.language || 'fr',\n      project_name: group.name || 'Projet',\n      scheduled_at: visit.scheduled_at,\n      scheduled_display: visitDate.toLocaleString(isEnglish ? 'en-CA' : 'fr-CA', { timeZone: 'America/Toronto', dateStyle: 'full', timeStyle: 'short' }),\n      duration_minutes: visit.duration_minutes || 60,\n      hours_until: hoursUntil,\n      assigned_to: visit.assigned_to,\n      calendly_event_uri: visit.calendly_event_uri,\n      // Email subject and body in correct language\n      email_subject: isEnglish \n        ? `Reminder: Your visit to ${group.name || 'our project'} is in ${hoursUntil} hours`\n        : `Rappel : Votre visite à ${group.name || 'notre projet'} est dans ${hoursUntil} heures`,\n      email_body: isEnglish\n        ? `Hi ${contact.first_name || 'there'},\\n\\nThis is a friendly reminder that your visit to ${group.name || 'our project'} is scheduled for ${visitDate.toLocaleString('en-CA', { timeZone: 'America/Toronto', dateStyle: 'full', timeStyle: 'short' })}.\\n\\nWe look forward to seeing you!\\n\\nBest regards,\\nThe Immersion Team`\n        : `Bonjour ${contact.first_name || ''},\\n\\nCeci est un rappel amical que votre visite à ${group.name || 'notre projet'} est prévue le ${visitDate.toLocaleString('fr-CA', { timeZone: 'America/Toronto', dateStyle: 'full', timeStyle: 'short' })}.\\n\\nAu plaisir de vous accueillir!\\n\\nCordialement,\\nL'équipe Immersion`\n    }\n  };\n});"
+      },
+      "id": "format-reminders",
+      "name": "Format Reminders (en/fr)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [910, 200]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.contact_email }}",
+        "subject": "={{ $json.email_subject }}",
+        "emailType": "text",
+        "message": "={{ $json.email_body }}"
+      },
+      "id": "send-email-reminder",
+      "name": "Email Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1130, 200]
+    },
+    {
+      "parameters": {
+        "channel": "#sales-atlas",
+        "text": "=📅 *Visit Reminder* ({{ $json.hours_until }}h)\n\n*Contact:* {{ $json.contact_name }} ({{ $json.contact_email }})\n*Project:* {{ $json.project_name }}\n*When:* {{ $json.scheduled_display }}\n*Duration:* {{ $json.duration_minutes }} min\n*Language:* {{ $json.language }}",
+        "otherOptions": {}
+      },
+      "id": "slack-reminder",
+      "name": "Slack: Visit Reminder",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1350, 200]
+    }
+  ],
+  "connections": {
+    "Every Hour": {
+      "main": [[{ "node": "Fetch Upcoming Visits (24h)", "type": "main", "index": 0 }]]
+    },
+    "Fetch Upcoming Visits (24h)": {
+      "main": [[{ "node": "Any Visits?", "type": "main", "index": 0 }]]
+    },
+    "Any Visits?": {
+      "main": [
+        [{ "node": "Format Reminders (en/fr)", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Format Reminders (en/fr)": {
+      "main": [[{ "node": "Email Reminder", "type": "main", "index": 0 }]]
+    },
+    "Email Reminder": {
+      "main": [[{ "node": "Slack: Visit Reminder", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Runs hourly. Finds atlas_visits scheduled within 24 hours, sends bilingual email reminders to contacts and Slack alerts to sales reps."
+  }
+}

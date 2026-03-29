@@ -1,0 +1,216 @@
+{
+  "name": "Atlas Lead Routing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "atlas-lead-created",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: New Lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract lead data from Atlas MCP callback\nconst body = $input.first().json.body || $input.first().json;\n\nconst lead = {\n  contact_id: body.crm_record_id,\n  promoter_id: body.project_id ? undefined : null, // resolved below\n  building_group_id: null,\n  email: body.payload?.lead?.email || body.payload?.lead?.emails?.[0],\n  first_name: body.payload?.lead?.first_name,\n  last_name: body.payload?.lead?.last_name,\n  phone: body.payload?.lead?.phone || body.payload?.lead?.phone_number,\n  language: body.payload?.lead?.language || 'fr',\n  lead_source: body.payload?.lead?.lead_source || 'atlas_widget',\n  qualification_score: body.payload?.lead?.qualification_score || 0,\n  project_id: body.project_id,\n  source_agent: body.source_agent || 'sales_concierge',\n};\n\nreturn [{ json: lead }];"
+      },
+      "id": "parse-lead",
+      "name": "Parse Lead Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/get_routing_rules",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_promoter_id",
+              "value": "={{ $json.promoter_id }}"
+            },
+            {
+              "name": "p_language",
+              "value": "={{ $json.language }}"
+            },
+            {
+              "name": "p_score",
+              "value": "={{ $json.qualification_score }}"
+            }
+          ]
+        }
+      },
+      "id": "fetch-routing-rules",
+      "name": "Fetch Routing Rules",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "rule-found",
+              "leftValue": "={{ $json.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-routing-rule",
+      "name": "Rule Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/contacts?id=eq.{{ $('Parse Lead Data').item.json.contact_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"assigned_to\": \"{{ $json[0].assigned_to }}\"\n}"
+      },
+      "id": "assign-rep",
+      "name": "Assign Sales Rep",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1130, 200]
+    },
+    {
+      "parameters": {
+        "channel": "#sales-atlas",
+        "text": "=🆕 *New Atlas Lead Assigned*\n\n*Name:* {{ $('Parse Lead Data').item.json.first_name }} {{ $('Parse Lead Data').item.json.last_name }}\n*Email:* {{ $('Parse Lead Data').item.json.email }}\n*Language:* {{ $('Parse Lead Data').item.json.language }}\n*Source:* {{ $('Parse Lead Data').item.json.lead_source }}\n*Score:* {{ $('Parse Lead Data').item.json.qualification_score }}/100\n*Project:* {{ $('Parse Lead Data').item.json.project_id }}\n\n_Assigned to rep via routing rule._",
+        "otherOptions": {}
+      },
+      "id": "slack-notify-assigned",
+      "name": "Slack: Lead Assigned",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1350, 200]
+    },
+    {
+      "parameters": {
+        "channel": "#sales-atlas",
+        "text": "=⚠️ *Unrouted Atlas Lead*\n\n*Name:* {{ $('Parse Lead Data').item.json.first_name }} {{ $('Parse Lead Data').item.json.last_name }}\n*Email:* {{ $('Parse Lead Data').item.json.email }}\n*Language:* {{ $('Parse Lead Data').item.json.language }}\n*Score:* {{ $('Parse Lead Data').item.json.qualification_score }}/100\n*Project:* {{ $('Parse Lead Data').item.json.project_id }}\n\n_No routing rule matched. Please assign manually._",
+        "otherOptions": {}
+      },
+      "id": "slack-notify-unrouted",
+      "name": "Slack: No Rule Match",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1130, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'routed', assigned: true }) }}"
+      },
+      "id": "respond-success",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1570, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'unrouted', assigned: false }) }}"
+      },
+      "id": "respond-unrouted",
+      "name": "Respond Unrouted",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1350, 420]
+    }
+  ],
+  "connections": {
+    "Webhook: New Lead": {
+      "main": [[{ "node": "Parse Lead Data", "type": "main", "index": 0 }]]
+    },
+    "Parse Lead Data": {
+      "main": [[{ "node": "Fetch Routing Rules", "type": "main", "index": 0 }]]
+    },
+    "Fetch Routing Rules": {
+      "main": [[{ "node": "Rule Found?", "type": "main", "index": 0 }]]
+    },
+    "Rule Found?": {
+      "main": [
+        [{ "node": "Assign Sales Rep", "type": "main", "index": 0 }],
+        [{ "node": "Slack: No Rule Match", "type": "main", "index": 0 }]
+      ]
+    },
+    "Assign Sales Rep": {
+      "main": [[{ "node": "Slack: Lead Assigned", "type": "main", "index": 0 }]]
+    },
+    "Slack: Lead Assigned": {
+      "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]]
+    },
+    "Slack: No Rule Match": {
+      "main": [[{ "node": "Respond Unrouted", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Routes new Atlas leads to the correct sales rep based on project, language, and qualification score. Posts Slack notifications."
+  }
+}

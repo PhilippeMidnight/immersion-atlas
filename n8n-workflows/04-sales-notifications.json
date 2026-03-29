@@ -1,0 +1,116 @@
+{
+  "name": "Atlas Sales Notifications",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "atlas-sales-alert",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Sales Alert",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nconst alert = {\n  type: body.alert_type || 'lead_qualified',\n  contact_id: body.contact_id || body.crm_record_id,\n  contact_name: body.contact_name || `${body.first_name || ''} ${body.last_name || ''}`.trim(),\n  email: body.email,\n  phone: body.phone,\n  project_id: body.project_id,\n  project_name: body.project_name || body.project_id,\n  qualification_score: body.qualification_score || 0,\n  language: body.language || 'fr',\n  deal_value: body.deal_value,\n  contract_status: body.contract_status,\n  assigned_to: body.assigned_to,\n  source_agent: body.source_agent || 'atlas',\n  details: body.details || '',\n};\n\n// Determine priority\nif (alert.qualification_score >= 80 || alert.contract_status === 'awaiting_signature') {\n  alert.priority = 'high';\n  alert.emoji = '🔥';\n} else if (alert.qualification_score >= 60 || alert.contract_status === 'signed') {\n  alert.priority = 'medium';\n  alert.emoji = '📊';\n} else {\n  alert.priority = 'low';\n  alert.emoji = 'ℹ️';\n}\n\nreturn [{ json: alert }];"
+      },
+      "id": "parse-alert",
+      "name": "Parse & Score Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.priority }}", "rightValue": "high", "operator": { "type": "string", "operation": "equals" } }]
+              },
+              "renameOutput": true,
+              "outputKey": "high_priority"
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.priority }}", "rightValue": "medium", "operator": { "type": "string", "operation": "equals" } }]
+              },
+              "renameOutput": true,
+              "outputKey": "medium_priority"
+            }
+          ],
+          "fallbackOutput": {
+            "renameOutput": true,
+            "outputKey": "low_priority"
+          }
+        }
+      },
+      "id": "priority-switch",
+      "name": "Priority Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#sales-atlas",
+        "text": "={{ $json.emoji }} *HIGH PRIORITY — {{ $json.type === 'lead_qualified' ? 'Hot Lead' : 'Deal Update' }}*\n\n*Contact:* {{ $json.contact_name }} ({{ $json.email }})\n*Project:* {{ $json.project_name }}\n*Score:* {{ $json.qualification_score }}/100\n{{ $json.deal_value ? '*Deal value:* $' + $json.deal_value : '' }}\n{{ $json.contract_status ? '*Contract:* ' + $json.contract_status : '' }}\n*Language:* {{ $json.language }}\n\n⚡ _Requires immediate follow-up_",
+        "otherOptions": {}
+      },
+      "id": "slack-high",
+      "name": "Slack: 🔥 High Priority",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [960, 150]
+    },
+    {
+      "parameters": {
+        "channel": "#sales-atlas",
+        "text": "={{ $json.emoji }} *{{ $json.type === 'lead_qualified' ? 'Qualified Lead' : 'Deal Update' }}*\n\n*Contact:* {{ $json.contact_name }} ({{ $json.email }})\n*Project:* {{ $json.project_name }}\n*Score:* {{ $json.qualification_score }}/100\n{{ $json.contract_status ? '*Contract:* ' + $json.contract_status : '' }}\n*Language:* {{ $json.language }}",
+        "otherOptions": {}
+      },
+      "id": "slack-medium",
+      "name": "Slack: 📊 Medium Priority",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [960, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#sales-atlas",
+        "text": "={{ $json.emoji }} {{ $json.type }}: {{ $json.contact_name }} — {{ $json.project_name }} (score: {{ $json.qualification_score }})",
+        "otherOptions": {}
+      },
+      "id": "slack-low",
+      "name": "Slack: ℹ️ Low Priority",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [960, 460]
+    }
+  ],
+  "connections": {
+    "Webhook: Sales Alert": {
+      "main": [[{ "node": "Parse & Score Alert", "type": "main", "index": 0 }]]
+    },
+    "Parse & Score Alert": {
+      "main": [[{ "node": "Priority Router", "type": "main", "index": 0 }]]
+    },
+    "Priority Router": {
+      "main": [
+        [{ "node": "Slack: 🔥 High Priority", "type": "main", "index": 0 }],
+        [{ "node": "Slack: 📊 Medium Priority", "type": "main", "index": 0 }],
+        [{ "node": "Slack: ℹ️ Low Priority", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Receives sales alert webhooks from Atlas CRM operations. Routes by priority (score + deal status) and posts to #sales-atlas Slack channel with appropriate urgency."
+  }
+}
